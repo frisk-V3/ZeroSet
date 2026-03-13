@@ -1,30 +1,56 @@
-name: Build and Release
+name: Build and Release ZeroSet
 
 on:
   push:
+    branches:
+      - main    # mainにpushされたら実行
     tags:
-      - "v*" # v1.0 などのタグがPushされた時だけ実行
+      - "v*"    # v1.0などのタグがpushされたら実行
 
 jobs:
   build:
     runs-on: windows-latest
-    permissions: # Release作成に権限が必要
-      contents: write
+    permissions:
+      contents: write # Release作成に必須の権限
 
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '8.0.x'
-          cache: true # これが「NETDLしない」爆速の肝
+          cache: true # これで「NETDL」をスキップして爆速化
+
+      - name: Restore dependencies
+        run: dotnet restore
 
       - name: Publish (Single EXE)
-        run: dotnet publish -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -o ./dist
+        # -p:PublishSingleFile=true で1つのexeに固める
+        # -p:PublishReadyToRun=true で起動速度をさらに高速化
+        run: >
+          dotnet publish -c Release 
+          -r win-x64 
+          --self-contained true 
+          -p:PublishSingleFile=true 
+          -p:PublishReadyToRun=true 
+          -o ./dist
 
       - name: Create Release
         uses: softprops/action-gh-release@v2
+        if: startsWith(github.ref, 'refs/tags/') # タグがある時だけ正式Release
         with:
           files: ./dist/*.exe
-          generate_release_notes: true # 変更点も自動で書いてくれる
+          generate_release_notes: true
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload Artifact (Dev Build)
+        if: "!startsWith(github.ref, 'refs/tags/')" # タグがない時はArtifactに保存
+        uses: actions/upload-artifact@v4
+        with:
+          name: ZeroSet-Debug
+          path: ./dist/*.exe
