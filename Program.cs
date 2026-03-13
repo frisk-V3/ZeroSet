@@ -1,46 +1,37 @@
+using System.Runtime.InteropServices;
 using System.Diagnostics;
-using System.Security.Principal;
 
-// 1. 管理者権限チェック（レジストリやシステム設定に必須）
-if (!new WindowsPrincipal(WindowsIdentity.GetCurrent()).IsInRole(WindowsBuiltInRole.Administrator))
+Console.WriteLine($"🚀 Starting setup on {RuntimeInformation.OSDescription}...");
+
+if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
 {
-    Console.WriteLine("❌ 管理者権限で実行してください。");
-    return;
+    // Windows: winget を使用
+    RunInstall("winget", "install --id Google.Chrome --silent");
+    RunInstall("winget", "install --id Microsoft.VisualStudioCode --silent");
+}
+else if (RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
+{
+    // Mac: Homebrew を使用
+    RunInstall("brew", "install --cask google-chrome");
+    RunInstall("brew", "install --cask visual-studio-code");
+}
+else if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux))
+{
+    // Linux: apt を使用 (Ubuntu/Debian系)
+    RunInstall("sudo", "apt update");
+    RunInstall("sudo", "apt install -y curl git");
 }
 
-Console.WriteLine("🚀 --- My Ultimate PC Setup Start --- 🚀");
-
-// 2. インストールしたいアプリ（winget ID）
-var apps = new[] {
-    "Google.Chrome",
-    "Microsoft.VisualStudioCode",
-    "Git.Git",
-    "Discord.Discord",
-    "Docker.DockerDesktop" // 重いのも入れちゃう
-};
-
-foreach (var app in apps)
+void RunInstall(string command, string args)
 {
-    Console.Write($"📦 Installing {app}... ");
+    Console.WriteLine($"📦 Executing: {command} {args}");
     var process = Process.Start(new ProcessStartInfo
     {
-        FileName = "winget",
-        Arguments = $"install --id {app} --silent --accept-source-agreements --accept-package-agreements",
-        CreateNoWindow = true,
-        RedirectStandardOutput = true
+        FileName = command,
+        Arguments = args,
+        UseShellExecute = false
     });
     process?.WaitForExit();
-    Console.WriteLine(process?.ExitCode == 0 ? "✅ Success!" : "⚠️ Skip/Error");
 }
 
-// 3. Windowsの「こだわり設定」をレジストリで一括変更
-Console.WriteLine("🛠️  Applying Windows tweaks...");
-// 例：エクスプローラーで拡張子を常に表示
-Process.Start("reg", @"add HKCU\Software\Microsoft\Windows\CurrentVersion\Explorer\Advanced /v HideFileExt /t REG_DWORD /d 0 /f");
-
-// 4. 開発用フォルダの作成
-string devPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Source", "Repos");
-if (!Directory.Exists(devPath)) Directory.CreateDirectory(devPath);
-
-Console.WriteLine("\n✨ --- 全てのセットアップが完了しました！ --- ✨");
-Console.ReadKey();
+Console.WriteLine("\n✨ Setup complete!");
