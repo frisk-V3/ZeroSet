@@ -1,14 +1,30 @@
-name: Auto Release ZeroSet
+name: Multi-OS Ultimate Build
 
 on:
   push:
-    branches: [ main ] # mainにPushされたら即実行
+    branches: [ main ]
+    tags: [ "v*" ]
 
 jobs:
   build:
-    runs-on: windows-latest
+    name: Build for ${{ matrix.os }}
+    runs-on: ${{ matrix.os }}
     permissions:
-      contents: write # これがRelease作成に絶対必要
+      contents: write
+    strategy:
+      matrix:
+        # Windows, Linux, Mac を並列で立ち上げる魔法
+        os: [windows-latest, ubuntu-latest, macos-latest]
+        include:
+          - os: windows-latest
+            rid: win-x64
+            suffix: .exe
+          - os: ubuntu-latest
+            rid: linux-x64
+            suffix: -linux
+          - os: macos-latest
+            rid: osx-arm64 # M1/M2/M3 Mac用
+            suffix: -mac
 
     steps:
       - uses: actions/checkout@v4
@@ -18,19 +34,32 @@ jobs:
         with:
           dotnet-version: '8.0.x'
           cache: true
+          # csprojを監視してNETDLを回避
           cache-dependency-path: '**/*.csproj'
 
-      - name: Publish (Single EXE)
-        run: dotnet publish -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -o ./publish
+      - name: Publish
+        # 各OSのRID（win-x64等）に合わせて1つのファイルに固める
+        run: >
+          dotnet publish -c Release 
+          -r ${{ matrix.rid }} 
+          --self-contained true 
+          -p:PublishSingleFile=true 
+          -o ./dist
+
+      - name: Rename Artifact
+        shell: bash
+        # 出力ファイル名をOSごとに分かりやすくリネーム
+        run: |
+          cd dist
+          mv ZeroSet${{ matrix.suffix == '.exe' && '.exe' || '' }} ZeroSet${{ matrix.suffix }} || mv ZeroSet ZeroSet${{ matrix.suffix }}
 
       - name: Create or Update Release
         uses: softprops/action-gh-release@v2
         with:
-          # タグ名を固定（latest）にして、毎回同じ場所にリリースを更新する
           tag_name: latest
-          name: Latest Build
-          body: "最新のビルド済みexeです。"
-          files: ./publish/*.exe
+          name: Multi-OS Latest Build
+          body: "Windows, Mac, Linux 全対応の爆速セットアップツールです。"
+          files: ./dist/ZeroSet*
           draft: false
           prerelease: false
         env:
