@@ -1,9 +1,23 @@
 <Project Sdk="Microsoft.NET.Sdk">
+
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <TargetFramework>net8.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+
+    <!--  1つの実行ファイルに固める設定 -->
+    <PublishSingleFile>true</PublishSingleFile>
+    <!-- 実行時に必要なランタイムを同梱する（相手のPCに.NETがなくても動く） -->
+    <SelfContained>true</SelfContained>
+    <!-- 不要なコードを削ってファイルサイズを小さくする（Trim） -->
+    <PublishTrimmed>false</PublishTrimmed>
+    
+    <!--  起動速度を爆速にする設定（Windows/Linuxで有効） -->
+    <PublishReadyToRun>true</PublishReadyToRun>
+    
+    <!-- NETDLをスキップするためのLockファイル生成設定 -->
     <RestorePackagesWithLockFile>true</RestorePackagesWithLockFile>
   </PropertyGroup>
+
 </Project>
