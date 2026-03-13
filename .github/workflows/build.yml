@@ -3,15 +3,15 @@ name: Build and Release ZeroSet
 on:
   push:
     branches:
-      - main    # mainにpushされたら実行
+      - main
     tags:
-      - "v*"    # v1.0などのタグがpushされたら実行
+      - "v*"
 
 jobs:
   build:
     runs-on: windows-latest
     permissions:
-      contents: write # Release作成に必須の権限
+      contents: write
 
     steps:
       - name: Checkout code
@@ -21,14 +21,14 @@ jobs:
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '8.0.x'
-          cache: true # これで「NETDL」をスキップして爆速化
+          # Lockファイルがない場合は、csprojファイルを監視対象にする
+          cache: true
+          cache-dependency-path: '**/*.csproj'
 
       - name: Restore dependencies
         run: dotnet restore
 
       - name: Publish (Single EXE)
-        # -p:PublishSingleFile=true で1つのexeに固める
-        # -p:PublishReadyToRun=true で起動速度をさらに高速化
         run: >
           dotnet publish -c Release 
           -r win-x64 
@@ -39,17 +39,15 @@ jobs:
 
       - name: Create Release
         uses: softprops/action-gh-release@v2
-        if: startsWith(github.ref, 'refs/tags/') # タグがある時だけ正式Release
+        if: startsWith(github.ref, 'refs/tags/')
         with:
           files: ./dist/*.exe
           generate_release_notes: true
-          draft: false
-          prerelease: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Upload Artifact (Dev Build)
-        if: "!startsWith(github.ref, 'refs/tags/')" # タグがない時はArtifactに保存
+        if: "!startsWith(github.ref, 'refs/tags/')"
         uses: actions/upload-artifact@v4
         with:
           name: ZeroSet-Debug
